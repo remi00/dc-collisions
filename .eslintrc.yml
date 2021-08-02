@@ -1,0 +1,28 @@
+# http://eslint.org/docs/user-guide/configuring
+---
+root: true
+parserOptions:
+  sourceType: module
+env:
+  browser: true
+  node: true
+  es6: true
+  mocha: true
+extends:
+  - eslint-config-airbnb-base
+  - plugin:vue/recommended
+rules:
+  camelcase: off
+  import/extensions:
+    - error
+    - always
+    - js: never
+      vue: never
+  vue/max-attributes-per-line:
+    - error
+    - singleline: 4
+  arrow-parens:
+    - error
+    - as-needed
+    - requireForBlockBody: true
+  implicit-arrow-linebreak: off
