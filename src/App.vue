@@ -1,31 +1,48 @@
 <template>
-  <div class="app">
+  <div>
     <div class="banner">
-      <div class="header">
-        <h1>D.C. Collisions</h1>
-        <h2>Frequency of car incidents in District Columbia within 2010-2014 range</h2>
-      </div>
-      <dc-mode-select v-model="pickedMode" :options="modes" />
-
-      <div id="legend" class="legend">
-        <template
-          v-for="(value, index) in quartiles"
-          :key="value"
-        >
-          <div :style="{ background: quartileColorStyle(index) }" class="legend-bubble">
-            {{ value }}
-          </div>
-        </template>
-      </div>
+      <h1>D.C. Collisions</h1>
+      <h2>Frequency of car incidents in District Columbia within 2010-2014 range</h2>
     </div>
+
+    <dc-toggles
+      v-model:mode="pickedMode"
+      v-model:normalize="normalizePerArea"
+      :options="modes"
+      class="toggles"
+    />
+
+    <div id="legend" class="legend">
+      <template
+        v-for="(value, index) in quartiles"
+        :key="value"
+      >
+        <div :style="{ background: quartileColorStyle(index) }" class="legend-bubble">
+          {{ value }}
+        </div>
+      </template>
+    </div>
+
     <dc-details
       v-show="pickedCounty"
       :label="pickedCounty && pickedCounty.name"
-      :chart-data="pickedChartData"
+      :subtitle="detailsSubtitle"
       class="details"
-    />
+      @close="pickedCounty = null"
+    >
+      <div v-show="isEmpty">
+        No accidents in this area...
+      </div>
+      <dc-chart
+        v-show="!isEmpty"
+        :x-max="normalizePerArea ? 0 : 12"
+        :series="pickedChartData"
+      />
+    </dc-details>
+
     <dc-areas-map
       :mode="pickedMode"
+      :normalize="normalizePerArea"
       :geo-data="geoData"
       :area-outline-color="areaOutlineColor"
       :area-fill-color="areaFillColor"
@@ -36,11 +53,11 @@
 </template>
 
 <script>
-import * as d3 from 'd3';
-import GeoData from '../data/annotatedData.geo';
-import DcModeSelect from './components/DcModeSelect.vue';
+import GeoData from '../data/annotatedData.geo.json';
+import DcToggles from './components/DcToggles.vue';
 import DcAreasMap from './components/DcAreasMap.vue';
 import DcDetails from './components/DcDetails.vue';
+import DcChart from './components/DcChart.vue';
 
 const modes = ['total', '2010', '2011', '2012', '2013', '2014'];
 
@@ -54,9 +71,10 @@ GeoData.features = GeoData.features.map(({ properties, ...item }) => {
 
 export default {
   components: {
-    DcModeSelect,
+    DcToggles,
     DcAreasMap,
     DcDetails,
+    DcChart,
   },
   data() {
     return {
@@ -64,17 +82,24 @@ export default {
       geoData: GeoData,
       pickedMode: 'total',
       pickedCounty: null,
+      normalizePerArea: true,
     };
   },
   computed: {
     areaOutlineColor() {
       return 'rgba(160,160,160,.3)';
     },
+    fillColorFormula() {
+      if (this.normalizePerArea) {
+        return ['/', ['get', this.pickedMode], ['/', ['get', 'shape_area'], ['literal', 1000000]]];
+      }
+      return ['get', this.pickedMode];
+    },
     areaFillColor() {
       return [
         'interpolate',
         ['linear'],
-        ['/', ['get', this.pickedMode], ['/', ['get', 'shape_area'], ['literal', 1000000]]],
+        this.fillColorFormula,
         0,
         this.quartileColorStyle(0),
         this.quartileThreshold(1),
@@ -111,9 +136,20 @@ export default {
       if (!this.pickedCounty) return [];
       const series = this.modes
         .filter(mode => mode !== 'total')
-        .map(name => ({ name, value: this.pickedCounty[name] }));
+        .map(name => ({
+          name,
+          value: this.normalizePerArea
+            ? this.pickedCounty[name] / (this.pickedCounty.shape_area / 1000000)
+            : this.pickedCounty[name],
+        }));
       if (series.every(({ value }) => value === 0)) return [];
       return series;
+    },
+    isEmpty() {
+      return !this.pickedCounty || !this.pickedCounty.total;
+    },
+    detailsSubtitle() {
+      return this.normalizePerArea ? 'Crashes per year normalized per county area' : 'Total crashes per year';
     },
   },
   methods: {
@@ -126,29 +162,35 @@ export default {
 
 <style scoped>
 body { margin: 0; padding: 0; }
-#map { position: absolute; top: 0; bottom: 0; width: 100%; }
 
 .banner {
   position: absolute;
+  top: 0;
   left: 0;
   right: 0;
+  height: 128px;
   width: 100%;
+  padding: 20px;
   z-index: 1;
+  background: rgb(255,255,255);
+  background: linear-gradient(180deg, rgba(255,255,255,1) 20%, rgba(255,255,255,0) 100%);
 }
-.header {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-}
-.header h1, .header h2 {
+.banner h1, .banner h2 {
   margin: 0;
 }
-.header h1 {
+.banner h1 {
   font-size: 2em;
 }
-.header h2 {
+.banner h2 {
   font-size: 1em;
   font-weight: normal;
+}
+.toggles {
+  position: absolute;
+  left: 0;
+  top: 80px;
+  width: 100%;
+  z-index: 1;
 }
 
 .legend {
