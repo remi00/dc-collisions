@@ -15,6 +15,10 @@ export default {
       type: String,
       default: 'total',
     },
+    normalize: {
+      type: Boolean,
+      default: true,
+    },
     geoData: {
       type: Object,
       required: true,
@@ -38,8 +42,14 @@ export default {
   watch: {
     mode: {
       immediate: true,
-      handler(mode) {
-        this.setMapLayer(mode);
+      handler() {
+        this.setMapLayer();
+      },
+    },
+    normalize: {
+      immediate: true,
+      handler() {
+        this.setMapLayer();
       },
     },
   },
@@ -60,7 +70,7 @@ export default {
         type: 'geojson',
         data: this.geoData,
       });
-      this.setMapLayer(this.mode);
+      this.setMapLayer();
 
       // When a click event occurs on a feature in the counties layer, open a popup at the
       // location of the feature, with description HTML from its properties.
@@ -96,3 +106,7 @@ export default {
   },
 };
 </script>
+<style scoped>
+#map { position: absolute; top: 0; bottom: 0; left: 0; right: 0; width: 100%; }
+
+</style>
