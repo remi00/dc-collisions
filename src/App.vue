@@ -11,7 +11,7 @@
           :key="mode"
         >
           <input :id="mode" v-model="pickedMode" type="radio" :value="mode">
-          <label :for="mode">{{ mode }}</label>
+          <label :for="mode" :class="{ active: mode === pickedMode }">{{ mode }}</label>
         </template>
       </div>
 
@@ -29,7 +29,8 @@
     <div id="details" ref="details" v-show="pickedCounty">
       <div class="close" @click="pickedCounty = null">X</div>
       <h2>{{ pickedCounty && pickedCounty.name }}</h2>
-      <div>Total accidents: <strong>{{pickedCounty && pickedCounty.total}}</strong> </div>
+      <div>Total accidents: <strong>{{pickedCounty && pickedCounty.total}}</strong></div>
+      <div>Area: <strong>{{pickedCounty && pickedCounty.shape_area / 1000000}}</strong> </div>
       <div id="diagram" ref="diagram" />
     </div>
     <div id="map" />
@@ -63,6 +64,10 @@ export default {
       pickedCounty: null,
       map: null,
       diagram: null,
+      xAxis: null,
+      yAxis: null,
+      bars: null,
+      labels: null,
     };
   },
   computed: {
@@ -140,6 +145,15 @@ export default {
     this.diagram = d3.select(this.$refs.diagram)
       .append('svg')
       .attr('viewBox', [0, 0, '100%', '100%']);
+    this.bars = this.diagram.append('g')
+      .attr('fill', 'steelblue');
+    this.labels = this.diagram.append('g')
+      .attr('fill', 'white')
+      .attr('text-anchor', 'end')
+      .attr('font-family', 'sans-serif')
+      .attr('font-size', 12);
+    this.xAxis = this.diagram.append('g');
+    this.yAxis = this.diagram.append('g');
   },
   methods: {
     setMapLayer(mode) {
@@ -186,46 +200,37 @@ export default {
         .rangeRound([margin.top, height - margin.bottom])
         .padding(0.1);
 
-      this.diagram.append('g')
-        .attr('fill', 'steelblue')
+      this.bars
         .selectAll('rect')
         .data(data)
         .join('rect')
-          .attr('x', x(0))
-          .attr('y', (d, i) => y(i))
-          .attr('width', d => x(d.value) - x(0))
-          .attr('height', y.bandwidth());
+        .attr('x', x(0))
+        .attr('y', (d, i) => y(i))
+        .attr('width', d => x(d.value) - x(0))
+        .attr('height', y.bandwidth());
 
-      this.diagram.append('g')
-          .attr('fill', 'white')
-          .attr('text-anchor', 'end')
-          .attr('font-family', 'sans-serif')
-          .attr('font-size', 12)
+      this.labels
         .selectAll('text')
         .data(data)
-        .join("text")
-          .attr('x', d => x(d.value))
-          .attr('y', (d, i) => y(i) + y.bandwidth() / 2)
-          .attr('dy', '0.35em')
-          .attr('dx', -4)
-          .text(d => d.value)
+        .join('text')
+        .attr('x', d => x(d.value))
+        .attr('y', (d, i) => y(i) + y.bandwidth() / 2)
+        .attr('dy', '0.35em')
+        .attr('dx', -4)
+        .text(d => d.value)
         .call(text => text.filter(d => x(d.value) - x(0) < 20) // short bars
           .attr('dx', +4)
           .attr('fill', 'black')
           .attr('text-anchor', 'start'));
 
-      const xAxis = g => g
-        .attr("transform", `translate(0,${margin.top})`)
+      this.xAxis.call(g => g
+        .attr('transform', `translate(0,${margin.top})`)
         .call(d3.axisTop(x).ticks(width / 80))
-        .call(g => g.select(".domain").remove());
-      this.diagram.append('g')
-        .call(xAxis);
+        .call(g => g.select('.domain').remove()));
 
-      const yAxis = g => g
-        .attr("transform", `translate(${margin.left},0)`)
-        .call(d3.axisLeft(y).tickFormat(i => data[i].name).tickSizeOuter(0));
-      this.diagram.append('g')
-        .call(yAxis);
+      this.yAxis.call(g => g
+        .attr('transform', `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y).tickFormat(i => data[i].name).tickSizeOuter(0)));
     },
   },
 };
@@ -285,6 +290,7 @@ body { margin: 0; padding: 0; }
 
 .filter label.active {
   color: #900;
+  font-weight: bold;
 }
 
 .legend {
