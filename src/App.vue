@@ -12,7 +12,7 @@
 import * as d3 from 'd3';
 import MapboxGl from 'mapbox-gl/dist/mapbox-gl.js';
 
-MapboxGl.accessToken = 'pk.eyJ1IjoicmVtaTAwIiwiYSI6ImNrcnVyNjJkbDN0NTQydXJ2bnk1eHZsNXIifQ.pqHlhHOtpMjGWW8kenPQ5w';
+MapboxGl.accessToken = process.env.MAPBOX_API_KEY;
 
 export default {
   components: {
