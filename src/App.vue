@@ -5,15 +5,7 @@
         <h1>D.C. Collisions</h1>
         <h2>Frequency of car incidents in District Columbia within 2010-2014 range</h2>
       </div>
-      <div class="filter">
-        <template
-          v-for="mode in modes"
-          :key="mode"
-        >
-          <input :id="mode" v-model="pickedMode" type="radio" :value="mode">
-          <label :for="mode" :class="{ active: mode === pickedMode }">{{ mode }}</label>
-        </template>
-      </div>
+      <dc-mode-select v-model="pickedMode" :options="modes" />
 
       <div id="legend" class="legend">
         <template
@@ -26,21 +18,29 @@
         </template>
       </div>
     </div>
-    <div id="details" ref="details" v-show="pickedCounty">
-      <div class="close" @click="pickedCounty = null">X</div>
-      <h2>{{ pickedCounty && pickedCounty.name }}</h2>
-      <div>Total accidents: <strong>{{pickedCounty && pickedCounty.total}}</strong></div>
-      <div>Area: <strong>{{pickedCounty && pickedCounty.shape_area / 1000000}}</strong> </div>
-      <div id="diagram" ref="diagram" />
-    </div>
-    <div id="map" />
+    <dc-details
+      v-show="pickedCounty"
+      :label="pickedCounty && pickedCounty.name"
+      :chart-data="pickedChartData"
+      class="details"
+    />
+    <dc-areas-map
+      :mode="pickedMode"
+      :geo-data="geoData"
+      :area-outline-color="areaOutlineColor"
+      :area-fill-color="areaFillColor"
+      class="map"
+      @area-picked="areaPicked"
+    />
   </div>
 </template>
 
 <script>
 import * as d3 from 'd3';
-import MapboxGl from 'mapbox-gl/dist/mapbox-gl.js';
 import GeoData from '../data/annotatedData.geo';
+import DcModeSelect from './components/DcModeSelect.vue';
+import DcAreasMap from './components/DcAreasMap.vue';
+import DcDetails from './components/DcDetails.vue';
 
 const modes = ['total', '2010', '2011', '2012', '2013', '2014'];
 
@@ -52,25 +52,39 @@ GeoData.features = GeoData.features.map(({ properties, ...item }) => {
   return { properties, ...item };
 });
 
-MapboxGl.accessToken = process.env.MAPBOX_API_KEY;
-
 export default {
   components: {
+    DcModeSelect,
+    DcAreasMap,
+    DcDetails,
   },
   data() {
     return {
       modes,
+      geoData: GeoData,
       pickedMode: 'total',
       pickedCounty: null,
-      map: null,
-      diagram: null,
-      xAxis: null,
-      yAxis: null,
-      bars: null,
-      labels: null,
     };
   },
   computed: {
+    areaOutlineColor() {
+      return 'rgba(160,160,160,.3)';
+    },
+    areaFillColor() {
+      return [
+        'interpolate',
+        ['linear'],
+        ['/', ['get', this.pickedMode], ['/', ['get', 'shape_area'], ['literal', 1000000]]],
+        0,
+        this.quartileColorStyle(0),
+        this.quartileThreshold(1),
+        this.quartileColorStyle(1),
+        this.quartileThreshold(2),
+        this.quartileColorStyle(2),
+        this.quartileThreshold(3),
+        this.quartileColorStyle(3),
+      ];
+    },
     isTotal() {
       return this.pickedMode === 'total';
     },
@@ -93,144 +107,18 @@ export default {
     quartiles() {
       return [0, this.quartileThreshold(1), this.quartileThreshold(2), this.quartileThreshold(3)];
     },
-  },
-  watch: {
-    pickedMode: {
-      immediate: true,
-      handler(pickedMode) {
-        this.setMapLayer(pickedMode);
-      },
+    pickedChartData() {
+      if (!this.pickedCounty) return [];
+      const series = this.modes
+        .filter(mode => mode !== 'total')
+        .map(name => ({ name, value: this.pickedCounty[name] }));
+      if (series.every(({ value }) => value === 0)) return [];
+      return series;
     },
-    pickedCounty: {
-      handler(pickedCounty) {
-        this.detailsDiagram(pickedCounty);
-      },
-    },
-  },
-  mounted() {
-    this.map = new MapboxGl.Map({
-      container: 'map',
-      style: 'mapbox://styles/mapbox/light-v10',
-      center: [-77, 38.9],
-      zoom: 11,
-      maxBounds: [
-        [-77.4, 38.7],
-        [-76.6, 39.1],
-      ],
-    });
-
-    this.map.on('load', () => {
-      this.map.addSource('accidents', {
-        type: 'geojson',
-        data: GeoData,
-      });
-      this.setMapLayer(this.pickedMode);
-
-      // When a click event occurs on a feature in the counties layer, open a popup at the
-      // location of the feature, with description HTML from its properties.
-      this.map.on('click', 'counties', (e) => {
-        this.pickedCounty = e.features[0].properties;
-      });
-
-      // Change the cursor to a pointer when the mouse is over the counties layer.
-      this.map.on('mouseenter', 'counties', () => {
-        this.map.getCanvas().style.cursor = 'pointer';
-      });
-
-      // Change it back to a pointer when it leaves.
-      this.map.on('mouseleave', 'counties', () => {
-        this.map.getCanvas().style.cursor = '';
-      });
-    });
-    this.diagram = d3.select(this.$refs.diagram)
-      .append('svg')
-      .attr('viewBox', [0, 0, '100%', '100%']);
-    this.bars = this.diagram.append('g')
-      .attr('fill', 'steelblue');
-    this.labels = this.diagram.append('g')
-      .attr('fill', 'white')
-      .attr('text-anchor', 'end')
-      .attr('font-family', 'sans-serif')
-      .attr('font-size', 12);
-    this.xAxis = this.diagram.append('g');
-    this.yAxis = this.diagram.append('g');
   },
   methods: {
-    setMapLayer(mode) {
-      if (!this.map) return;
-      if (this.map.getLayer('counties')) this.map.removeLayer('counties');
-      this.map.addLayer({
-        id: 'counties',
-        type: 'fill',
-        source: 'accidents',
-        paint: {
-          'fill-outline-color': 'rgba(160,160,160,.3)',
-          'fill-color': [
-            'interpolate',
-            ['linear'],
-            ['/', ['get', mode], ['/', ['get', 'shape_area'], ['literal', 1000000]]],
-            0,
-            this.quartileColorStyle(0),
-            this.quartileThreshold(1),
-            this.quartileColorStyle(1),
-            this.quartileThreshold(2),
-            this.quartileColorStyle(2),
-            this.quartileThreshold(3),
-            this.quartileColorStyle(3),
-          ],
-        },
-      });
-    },
-    detailsDiagram(county) {
-      if (!county) return;
-      const margin = { top: 30, right: 0, bottom: 10, left: 30 };
-      const data = this.modes
-        .filter(mode => mode !== 'total')
-        .map(name => ({ name, value: county[name] }));
-
-      const width = 200;
-      const barHeight = 25;
-      const height = Math.ceil((data.length + 0.1) * barHeight) + margin.top + margin.bottom;
-
-      const x = d3.scaleLinear()
-        .domain([0, d3.max(data, d => d.value)])
-        .range([margin.left, width - margin.right]);
-      const y = d3.scaleBand()
-        .domain(d3.range(data.length))
-        .rangeRound([margin.top, height - margin.bottom])
-        .padding(0.1);
-
-      this.bars
-        .selectAll('rect')
-        .data(data)
-        .join('rect')
-        .attr('x', x(0))
-        .attr('y', (d, i) => y(i))
-        .attr('width', d => x(d.value) - x(0))
-        .attr('height', y.bandwidth());
-
-      this.labels
-        .selectAll('text')
-        .data(data)
-        .join('text')
-        .attr('x', d => x(d.value))
-        .attr('y', (d, i) => y(i) + y.bandwidth() / 2)
-        .attr('dy', '0.35em')
-        .attr('dx', -4)
-        .text(d => d.value)
-        .call(text => text.filter(d => x(d.value) - x(0) < 20) // short bars
-          .attr('dx', +4)
-          .attr('fill', 'black')
-          .attr('text-anchor', 'start'));
-
-      this.xAxis.call(g => g
-        .attr('transform', `translate(0,${margin.top})`)
-        .call(d3.axisTop(x).ticks(width / 80))
-        .call(g => g.select('.domain').remove()));
-
-      this.yAxis.call(g => g
-        .attr('transform', `translate(${margin.left},0)`)
-        .call(d3.axisLeft(y).tickFormat(i => data[i].name).tickSizeOuter(0)));
+    areaPicked(value) {
+      this.pickedCounty = value;
     },
   },
 };
@@ -240,12 +128,6 @@ export default {
 body { margin: 0; padding: 0; }
 #map { position: absolute; top: 0; bottom: 0; width: 100%; }
 
-.map-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  padding: 10px;
-}
 .banner {
   position: absolute;
   left: 0;
@@ -268,30 +150,6 @@ body { margin: 0; padding: 0; }
   font-size: 1em;
   font-weight: normal;
 }
-.filter {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-}
-.filter input[type=radio] {
-  display: none;
-}
-.filter label {
-  display: inline-block;
-  border: solid 1px #000;
-  background: #fff;
-  padding: 2px 5px;
-  cursor: pointer;
-  text-transform: uppercase;
-}
-.filter label:hover {
-  background: #ddd;
-}
-
-.filter label.active {
-  color: #900;
-  font-weight: bold;
-}
 
 .legend {
   position: absolute;
@@ -313,7 +171,7 @@ body { margin: 0; padding: 0; }
 .legend-bubble + .legend-bubble {
   margin-left: 15px;
 }
-#details {
+.details {
   position: absolute;
   background: #fff;
   border: solid 1px #000;
@@ -322,12 +180,5 @@ body { margin: 0; padding: 0; }
   bottom: 50px;
   z-index: 3;
   width: 40%;
-}
-#details .close {
-  position: absolute;
-  right: 10px;
-  top: 10px;
-  width: 10px;
-  height: 10px;
 }
 </style>
