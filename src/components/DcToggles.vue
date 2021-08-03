@@ -9,8 +9,15 @@
     >
       {{ item }}
     </div>
-    <input type="checkbox" id="normalize" :checked="normalize" @change="normalizeToggled">
-    <label for="normalize">Normalize per county area</label>
+    <input
+      id="normalize"
+      type="checkbox"
+      :checked="normalize"
+      @change="normalizeToggled"
+    >
+    <label for="normalize">
+      Normalize per county area
+    </label>
   </div>
 </template>
 
