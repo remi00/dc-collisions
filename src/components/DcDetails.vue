@@ -4,10 +4,6 @@
       ✖
     </div>
     <div class="contents">
-      <h2>{{ label }}</h2>
-      <p v-if="subtitle">
-        {{ subtitle }}
-      </p>
       <slot />
     </div>
   </div>
@@ -15,26 +11,27 @@
 
 <script>
 export default {
-  props: {
-    label: {
-      type: String,
-      default: '',
-    },
-    subtitle: {
-      type: String,
-      default: '',
-    },
-  },
 };
 </script>
 
 <style scoped>
+.details {
+  padding: 10px;
+}
+h2, p {
+  margin: 0;
+}
+p {
+  font-size: .8em;
+  color: #999;
+}
 .close {
   position: absolute;
-  right: 10px;
+  right: 16px;
   top: 10px;
   width: 10px;
   height: 10px;
   cursor: pointer;
 }
+
 </style>

@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="banner">
-      <h1>D.C. Collisions</h1>
+      <h1>D.C. Visualize</h1>
       <h2>Frequency of car incidents in District Columbia within 2010-2014 range</h2>
     </div>
 
@@ -26,19 +26,22 @@
 
     <dc-details
       v-show="pickedCounty"
-      :label="pickedCounty && pickedCounty.name"
-      :subtitle="detailsSubtitle"
       class="details"
       @close="pickedCounty = null"
     >
+      <h2>{{ pickedCounty && pickedCounty.name }}</h2>
+      <p><strong>&sum; {{ pickedCounty && pickedCounty.total }}</strong> {{ detailsSubtitle }}</p>
       <div v-show="isEmpty">
         No accidents in this area...
       </div>
-      <dc-chart
-        v-show="!isEmpty"
-        :x-max="perCountyDataMaxValue"
-        :series="pickedCountyDataSeries"
-      />
+      <div class="diagram-container">
+        <dc-chart
+          v-show="!isEmpty"
+          :x-max="perCountyDataMaxValue"
+          :series="pickedCountyDataSeries"
+          class="diagram"
+        />
+      </div>
     </dc-details>
 
     <dc-areas-map
@@ -133,8 +136,10 @@ export default {
       return sorted[sorted.length - 1];
     },
     pickedModeDataRanges() {
-      const clusters = this.pickedModeDataQuantiles(2);
-      return [...clusters.map(([first]) => first), this.pickedModeDataMaxValue];
+      return [
+        ...this.pickedModeDataQuantiles(2).map(([first]) => first),
+        this.pickedModeDataMaxValue,
+      ];
     },
     perCountyDataMaxValue() {
       const maxesPerCounty = this.geoData.features.map(({ properties }) => {
@@ -160,7 +165,7 @@ export default {
       return !this.pickedCounty || !this.pickedCounty.total;
     },
     detailsSubtitle() {
-      return this.normalizePerArea ? 'Crashes per year normalized per county area' : 'Total crashes per year';
+      return `crashes per year${this.normalizePerArea ? ' normalized per county area' : ''}`;
     },
     legendBackground() {
       return `linear-gradient(to right, ${clusters.map(index => this.dataRangeColorStyles(index)).join(',')})`;
@@ -177,22 +182,38 @@ export default {
 };
 </script>
 
-<style scoped>
-body { margin: 0; padding: 0; }
+<style>
+body {
+  margin: 0; padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    Droid Sans,
+    "Helvetica Neue",
+    sans-serif;
+}
 
+</style>
+<style scoped>
 .banner {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 128px;
-  width: 100%;
+  top: 0px;
+  left: 0px;
+  right: 0px;
   padding: 20px;
+  height: 128px;
   z-index: 1;
   background: rgb(255,255,255);
   background: linear-gradient(180deg, rgba(255,255,255,1) 20%, rgba(255,255,255,0) 100%);
 }
-.banner h1, .banner h2 {
+h1, h2, h3, p {
   margin: 0;
 }
 .banner h1 {
@@ -202,35 +223,74 @@ body { margin: 0; padding: 0; }
   font-size: 1em;
   font-weight: normal;
 }
+
 .toggles {
   position: absolute;
   left: 0;
-  top: 80px;
+  top: 100px;
   width: 100%;
   z-index: 1;
+}
+@media screen and (min-width: 640px) {
+  .toggles {
+    top: 80px;
+  }
 }
 
 .legend {
   position: absolute;
   left: 20px;
   top: 200px;
-  width: 30%;
-  z-index: 3;
+  right: 20px;
+  z-index: 1;
   border: solid 1px black;
   display: flex;
   flex-flow: row nowrap;
   justify-content: space-between;
-  padding: 1px 4px;
+  padding: 2px 5px;
+}
+@media screen and (min-width: 640px) {
+  .legend {
+    top: 150px;
+  }
+}
+
+@media screen and (min-width: 960px) {
+  .legend {
+    left: unset;
+    top: 100px;
+    right: 20px;
+    width: 30%;
+    max-width: 500px;
+  }
 }
 
 .details {
   position: absolute;
   background: #fff;
-  border: solid 1px #000;
+  border: solid 1px #333;
+  left: 30px;
   right: 30px;
-  top: 80px;
   bottom: 50px;
-  z-index: 3;
-  width: 40%;
+  z-index: 2;
+  filter: drop-shadow(0 0 2px #66666699);
+  border-radius: 14px;
+  height: 275px;
+}
+@media screen and (min-width: 640px) {
+  .details {
+    right: unset;
+    width: 80%;
+    max-width: 320px;
+  }
+}
+.diagram-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.diagram {
+  width: 260px;
+  height: 180px;
 }
 </style>

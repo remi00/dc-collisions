@@ -13,7 +13,7 @@ export default {
     },
     color: {
       type: String,
-      default: 'steelblue',
+      default: 'silver',
     },
     xMax: {
       type: Number,
@@ -49,18 +49,17 @@ export default {
   mounted() {
     this.diagram = d3.select(this.$refs.diagram)
       .append('svg')
-      .attr('viewBox', [0, 0, '100%', '100%']);
+      .attr('viewBox', [0, 0, 240, 180]);
+
     this.bars = this.diagram.append('g')
       .attr('fill', this.color);
     this.labels = this.diagram.append('g')
       .attr('fill', 'gray')
       .attr('text-anchor', 'start')
-      .attr('font-family', 'sans-serif')
-      .attr('font-size', 12);
+      .attr('font-size', 10);
     this.xAxis = this.diagram
       .append('g')
       .attr('transform', `translate(0,${this.chartMargins.top})`);
-
     this.yAxis = this.diagram.append('g')
       .attr('transform', `translate(${this.chartMargins.left},0)`);
   },
@@ -104,7 +103,7 @@ export default {
       this.xAxis.call(g => g
         .call(d3
           .axisTop(x)
-          .ticks(width / 80)));
+          .ticks(width / 50)));
       this.yAxis.call(g => g
         .call(d3
           .axisLeft(y)

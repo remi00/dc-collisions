@@ -69,7 +69,7 @@ export default {
     this.map = new MapboxGl.Map({
       container: 'map',
       style: 'mapbox://styles/mapbox/light-v10',
-      center: [-77, 38.9],
+      center: [-77.05, 38.93],
       zoom: 11,
       maxBounds: [
         [-77.4, 38.7],
