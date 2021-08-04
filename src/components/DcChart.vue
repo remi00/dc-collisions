@@ -53,8 +53,8 @@ export default {
     this.bars = this.diagram.append('g')
       .attr('fill', this.color);
     this.labels = this.diagram.append('g')
-      .attr('fill', 'white')
-      .attr('text-anchor', 'end')
+      .attr('fill', 'gray')
+      .attr('text-anchor', 'start')
       .attr('font-family', 'sans-serif')
       .attr('font-size', 12);
     this.xAxis = this.diagram
@@ -98,8 +98,8 @@ export default {
         .attr('x', d => x(d.value))
         .attr('y', (d, i) => y(i) + y.bandwidth() / 2)
         .attr('dy', '0.25em')
-        .attr('dx', -4)
-        .text(d => d.value);
+        .attr('dx', 5)
+        .text(d => Number(d.value).toFixed(1));
 
       this.xAxis.call(g => g
         .call(d3

@@ -14,11 +14,11 @@
 
     <div id="legend" class="legend">
       <template
-        v-for="(value, index) in quartiles"
+        v-for="(value, index) in pickedModeDataRanges"
         :key="value"
       >
-        <div :style="{ background: quartileColorStyle(index) }" class="legend-bubble">
-          {{ value }}
+        <div :style="{ background: dataRangeColorStyles(index) }" class="legend-bubble">
+          {{ round(value) }}
         </div>
       </template>
     </div>
@@ -35,8 +35,8 @@
       </div>
       <dc-chart
         v-show="!isEmpty"
-        :x-max="normalizePerArea ? 0 : 12"
-        :series="pickedChartData"
+        :x-max="perCountyDataMaxValue"
+        :series="pickedCountyDataSeries"
       />
     </dc-details>
 
@@ -58,8 +58,10 @@ import DcToggles from './components/DcToggles.vue';
 import DcAreasMap from './components/DcAreasMap.vue';
 import DcDetails from './components/DcDetails.vue';
 import DcChart from './components/DcChart.vue';
+import quantiles from './helpers/quantiles';
 
-const modes = ['total', '2010', '2011', '2012', '2013', '2014'];
+const years = ['2010', '2011', '2012', '2013', '2014'];
+const modes = ['total', ...years];
 
 /* normalize the data: replace nulls with zeroes */
 GeoData.features = GeoData.features.map(({ properties, ...item }) => {
@@ -100,42 +102,51 @@ export default {
         'interpolate',
         ['linear'],
         this.fillColorFormula,
-        0,
-        this.quartileColorStyle(0),
-        this.quartileThreshold(1),
-        this.quartileColorStyle(1),
-        this.quartileThreshold(2),
-        this.quartileColorStyle(2),
-        this.quartileThreshold(3),
-        this.quartileColorStyle(3),
+        ...[0, 1, 2].flatMap(index => ([
+          this.pickedModeDataRanges[index],
+          this.dataRangeColorStyles(index),
+        ])),
       ];
     },
     isTotal() {
       return this.pickedMode === 'total';
     },
-    quartileThreshold() {
-      return (n) => {
-        if (n === 0) return 0;
-        if (n === 1) return this.isTotal ? 3 : 2;
-        if (n === 2) return this.isTotal ? 16 : 5;
-        return this.isTotal ? 40 : 12;
-      };
-    },
-    quartileColorStyle() {
+    dataRangeColorStyles() {
       return (n) => {
         if (n === 0) return 'rgba(0,0,0,.2)';
-        if (n === 1) return 'rgba(120,0,0,.3)';
-        if (n === 2) return 'rgba(255,0,0,.4)';
+        if (n === 1) return 'rgba(255,0,0,.4)';
         return 'rgba(255,255,0,.5)';
       };
     },
-    quartiles() {
-      return [0, this.quartileThreshold(1), this.quartileThreshold(2), this.quartileThreshold(3)];
+    pickedModeDataValues() {
+      return this.geoData.features.map(({ properties }) =>
+        (this.normalizePerArea
+          ? properties[this.pickedMode] / (properties.shape_area / 1000000)
+          : properties[this.pickedMode]));
     },
-    pickedChartData() {
+    pickedModeDataQuantiles() {
+      return quantiles(this.pickedModeDataValues);
+    },
+    pickedModeDataMaxValue() {
+      const [sorted] = this.pickedModeDataQuantiles(1);
+      return sorted[sorted.length - 1];
+    },
+    pickedModeDataRanges() {
+      const clusters = this.pickedModeDataQuantiles(2);
+      return [...clusters.map(([first]) => first), this.pickedModeDataMaxValue];
+    },
+    perCountyDataMaxValue() {
+      const maxesPerCounty = this.geoData.features.map(({ properties }) => {
+        const max = Math.max(...years.map(year => properties[year]));
+        console.log(years.map(year => properties[year]), max);
+        if (!this.normalizePerArea) return max;
+        return max / (properties.shape_area / 1000000);
+      });
+      return Math.max(...maxesPerCounty);
+    },
+    pickedCountyDataSeries() {
       if (!this.pickedCounty) return [];
-      const series = this.modes
-        .filter(mode => mode !== 'total')
+      const series = years
         .map(name => ({
           name,
           value: this.normalizePerArea
@@ -155,6 +166,9 @@ export default {
   methods: {
     areaPicked(value) {
       this.pickedCounty = value;
+    },
+    round(value) {
+      return Number(value).toFixed(1);
     },
   },
 };
@@ -196,8 +210,9 @@ body { margin: 0; padding: 0; }
 .legend {
   position: absolute;
   left: 20px;
-  top: 100px;
+  top: 200px;
   width: 50%;
+  z-index: 3;
 }
 .legend-bubble {
   display: inline-block;
