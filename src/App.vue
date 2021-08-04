@@ -271,17 +271,18 @@ h1, h2, h3, p {
   border: solid 1px #333;
   left: 30px;
   right: 30px;
-  bottom: 50px;
+  bottom: 30px;
   z-index: 2;
   filter: drop-shadow(0 0 2px #66666699);
   border-radius: 14px;
-  height: 275px;
+  height: 240px;
 }
 @media screen and (min-width: 640px) {
   .details {
     right: unset;
     width: 80%;
     max-width: 320px;
+    height: 275px;
   }
 }
 .diagram-container {
