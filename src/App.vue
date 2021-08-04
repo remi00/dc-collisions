@@ -46,6 +46,7 @@
       :geo-data="geoData"
       :area-outline-color="areaOutlineColor"
       :area-fill-color="areaFillColor"
+      :highlighted="pickedCounty && pickedCounty.objectid"
       class="map"
       @area-picked="areaPicked"
     />
@@ -138,7 +139,6 @@ export default {
     perCountyDataMaxValue() {
       const maxesPerCounty = this.geoData.features.map(({ properties }) => {
         const max = Math.max(...years.map(year => properties[year]));
-        console.log(years.map(year => properties[year]), max);
         if (!this.normalizePerArea) return max;
         return max / (properties.shape_area / 1000000);
       });

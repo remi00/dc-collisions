@@ -31,6 +31,10 @@ export default {
       type: [Array, String],
       default: '',
     },
+    highlighted: {
+      type: [Number, String],
+      default: undefined,
+    },
   },
   data() {
     return {
@@ -43,13 +47,21 @@ export default {
     mode: {
       immediate: true,
       handler() {
-        this.setMapLayer();
+        this.setDefaultMapLayer();
       },
     },
     normalize: {
       immediate: true,
       handler() {
-        this.setMapLayer();
+        this.setDefaultMapLayer();
+      },
+    },
+    highlighted: {
+      immediate: true,
+      handler() {
+        if (!this.map) return;
+        // display only features with the 'name' property 'USA'
+        this.map.setFilter('highlights', ['==', ['get', 'objectid'], this.highlighted]);
       },
     },
   },
@@ -70,7 +82,8 @@ export default {
         type: 'geojson',
         data: this.geoData,
       });
-      this.setMapLayer();
+      this.setDefaultMapLayer();
+      this.setHighlightMapLayer();
 
       // When a click event occurs on a feature in the counties layer, open a popup at the
       // location of the feature, with description HTML from its properties.
@@ -90,7 +103,7 @@ export default {
     });
   },
   methods: {
-    setMapLayer() {
+    setDefaultMapLayer() {
       if (!this.map) return;
       if (this.map.getLayer('areas')) this.map.removeLayer('areas');
       this.map.addLayer({
@@ -102,6 +115,20 @@ export default {
           'fill-color': this.areaFillColor,
         },
       });
+    },
+    setHighlightMapLayer() {
+      if (!this.map) return;
+      if (this.map.getLayer('highlights')) this.map.removeLayer('highlights');
+      this.map.addLayer({
+        id: 'highlights',
+        type: 'line',
+        source: 'sources',
+        paint: {
+          'line-width': 2,
+          'line-color': '#000000',
+        },
+      });
+      this.map.setFilter('highlights', ['==', ['get', 'objectid'], this.highlighted]);
     },
   },
 };
