@@ -30,7 +30,7 @@
       @close="pickedCounty = null"
     >
       <h2>{{ pickedCounty && pickedCounty.name }}</h2>
-      <p><strong>&sum; {{ pickedCounty && pickedCounty.total }}</strong> {{ detailsSubtitle }}</p>
+      <p><strong>&sum; {{ totalInPickedCounty }}</strong> {{ detailsSubtitle }}</p>
       <div v-show="isEmpty">
         No accidents in this area...
       </div>
@@ -161,11 +161,18 @@ export default {
       if (series.every(({ value }) => value === 0)) return [];
       return series;
     },
+    totalInPickedCounty() {
+      if (!this.pickedCounty) return '';
+      if (this.normalizePerArea) {
+        return this.round(this.pickedCounty.total / (this.pickedCounty.shape_area / 1000000));
+      }
+      return this.pickedCounty.total;
+    },
     isEmpty() {
       return !this.pickedCounty || !this.pickedCounty.total;
     },
     detailsSubtitle() {
-      return `crashes per year${this.normalizePerArea ? ' normalized per county area' : ''}`;
+      return `crashes ${this.normalizePerArea ? ' normalized per county area' : ''}`;
     },
     legendBackground() {
       return `linear-gradient(to right, ${clusters.map(index => this.dataRangeColorStyles(index)).join(',')})`;
@@ -275,14 +282,14 @@ h1, h2, h3, p {
   z-index: 2;
   filter: drop-shadow(0 0 2px #66666699);
   border-radius: 14px;
-  height: 240px;
+  height: 220px;
 }
 @media screen and (min-width: 640px) {
   .details {
     right: unset;
     width: 80%;
     max-width: 320px;
-    height: 275px;
+    height: 250px;
   }
 }
 .diagram-container {
