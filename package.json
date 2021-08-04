@@ -2,9 +2,8 @@
   "name": "dc-visualize",
   "version": "1.0.0",
   "description": "",
-  "main": "src/index.html",
   "scripts": {
-    "start": "http-server ./src -a localhost -p 8000 -c-1 -P http://localhost:3000",
+    "start": "http-server ./dist -p 8000",
     "dev": "parcel serve ./src/index.html --port 8000",
     "build": "parcel build ./src/index.html",
     "test": "jest",
@@ -20,14 +19,15 @@
     "vue": "^3.1.5"
   },
   "devDependencies": {
-    "@parcel/transformer-vue": "^2.0.0-beta.3.1",
+    "@parcel/transformer-vue": "^v2.0.0-rc.0",
     "eslint": "^7.32.0",
     "eslint-config-airbnb-base": "^14.2.1",
     "eslint-plugin-import": "^2.23.4",
     "eslint-plugin-vue": "^7.15.0",
-    "parcel": "^2.0.0-beta.3.1"
+    "parcel": "^v2.0.0-rc.0"
   },
   "engines": {
     "node": ">=14.17.3"
-  }
+  },
+  "browserslist": "> 0.2%"
 }
