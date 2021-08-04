@@ -7,7 +7,7 @@
     "start": "http-server ./src -a localhost -p 8000 -c-1 -P http://localhost:3000",
     "dev": "parcel serve ./src/index.html --port 8000",
     "build": "parcel build ./src/index.html",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "lint": "eslint ."
   },
   "author": "",
@@ -15,6 +15,7 @@
   "dependencies": {
     "d3": "^7.0.0",
     "http-server": "^0.12.3",
+    "jest": "^27.0.6",
     "mapbox-gl": "^2.4.0",
     "vue": "^3.1.5"
   },
