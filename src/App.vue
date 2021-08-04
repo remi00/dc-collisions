@@ -12,15 +12,16 @@
       class="toggles"
     />
 
-    <div id="legend" class="legend">
-      <template
-        v-for="(value, index) in pickedModeDataRanges"
+    <div
+      class="legend"
+      :style="{ background: legendBackground }"
+    >
+      <div
+        v-for="value in pickedModeDataRanges"
         :key="value"
       >
-        <div :style="{ background: dataRangeColorStyles(index) }" class="legend-bubble">
-          {{ round(value) }}
-        </div>
-      </template>
+        {{ round(value) }}
+      </div>
     </div>
 
     <dc-details
@@ -64,6 +65,8 @@ import quantiles from './helpers/quantiles';
 const years = ['2010', '2011', '2012', '2013', '2014'];
 const modes = ['total', ...years];
 
+const clusters = [0, 1, 2]; // use just median to split the data into colour-codes
+
 /* normalize the data: replace nulls with zeroes */
 GeoData.features = GeoData.features.map(({ properties, ...item }) => {
   modes.forEach((name) => {
@@ -103,14 +106,11 @@ export default {
         'interpolate',
         ['linear'],
         this.fillColorFormula,
-        ...[0, 1, 2].flatMap(index => ([
+        ...clusters.flatMap(index => ([
           this.pickedModeDataRanges[index],
           this.dataRangeColorStyles(index),
         ])),
       ];
-    },
-    isTotal() {
-      return this.pickedMode === 'total';
     },
     dataRangeColorStyles() {
       return (n) => {
@@ -162,6 +162,9 @@ export default {
     detailsSubtitle() {
       return this.normalizePerArea ? 'Crashes per year normalized per county area' : 'Total crashes per year';
     },
+    legendBackground() {
+      return `linear-gradient(to right, ${clusters.map(index => this.dataRangeColorStyles(index)).join(',')})`;
+    },
   },
   methods: {
     areaPicked(value) {
@@ -211,23 +214,15 @@ body { margin: 0; padding: 0; }
   position: absolute;
   left: 20px;
   top: 200px;
-  width: 50%;
+  width: 30%;
   z-index: 3;
-}
-.legend-bubble {
-  display: inline-block;
-  margin: 0;
-  border: solid 1px rgba(160,160,160,.3);
-  border-radius: 50%;
-  padding: 12px;
-  width: 15px;
-  height: 15px;
-  text-align: center;
+  border: solid 1px black;
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: space-between;
+  padding: 1px 4px;
 }
 
-.legend-bubble + .legend-bubble {
-  margin-left: 15px;
-}
 .details {
   position: absolute;
   background: #fff;
